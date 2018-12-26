@@ -29,7 +29,7 @@ def iterative_hfs(niter = 20):
     #      class assignments for each (n) nodes
     #  accuracy
  
-    mat = sio.loadmat("../data/data_iterative_hfs_graph.mat")
+    mat = sio.loadmat("./data/data_iterative_hfs_graph.mat")
     W, Y, Y_masked = mat["W"], mat["Y"], mat["Y_masked"]
     
     
@@ -40,6 +40,8 @@ def iterative_hfs(niter = 20):
     # Compute the initializion vector f #
     #####################################
 
+    f = (Y_masked == classes).astype(np.float) # classes.reshape((-1,1))
+    assert f.shape == (len(Y_masked),len(classes)), "above line of code is wrong: got shape {0}, expected {1}".format(f.shape,(len(Y_masked),len(classes)))
 
     #####################################
     #####################################
@@ -50,13 +52,15 @@ def iterative_hfs(niter = 20):
     # expensive and that W is already undirected                    #
     #################################################################
 
-
-
+    sum_w = W.sum(axis=0)
+    for it in range(niter):
+        for cl_ind in range(len(classes)):
+            f[:,cl_ind] = (W.dot(f[:,cl_ind]))/sum_w
     
     ################################################
     # Assign the label in {1,...,c}                #
     ################################################
-    labels = 
+    labels = classes[f.argmax(axis=1)]
     
     ################################################
     ################################################    

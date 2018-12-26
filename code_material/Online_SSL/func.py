@@ -11,8 +11,8 @@ path=os.path.dirname(os.getcwd())
 sys.path.append(path)
 from helper import *
 
-face_haar_cascade = cv.CascadeClassifier("../data/haarcascade_frontalface_default.xml")
-eye_haar_cascade = cv.CascadeClassifier("../data/haarcascade_eye.xml")
+face_haar_cascade = cv.CascadeClassifier("/home/lucas/Documents/MVA/Graphs/TP3/code_material/data/haarcascade_frontalface_default.xml")
+eye_haar_cascade = cv.CascadeClassifier("/home/lucas/Documents/MVA/Graphs/TP3/code_material/data/haarcascade_eye.xml")
 
 
 
@@ -112,7 +112,7 @@ class incremental_k_centers:
     #     the new sample
     # Output
     # No output, update self   
-        assert (self.image_dimension == len(face)), "new image not of good size"
+        assert (self.image_dimension == len(face)), "new image not of good size {0}".format(self.image_dimension)
         
         if self.centroids.shape[0] >= self.max_num_centroids + 1:
             
@@ -133,9 +133,9 @@ class incremental_k_centers:
             # find the edge (c_rep,c_add) with the minimum distance 
             # (maximum similarity)                                          #
             #################################################################
-            min_dist = 
+            min_dist = self.centroids_distances.min()
      
-            c_rep, c_add = 
+            c_rep, c_add = np.unravel_index(self.centroids_distances.argmin(), self.centroids_distances.shape)
             #################################################################  
             #################################################################     
 
@@ -143,9 +143,17 @@ class incremental_k_centers:
             # update data structures                                        #
             # None of the two nodes are taboo, if there is one, it is c_rep,
             # otherwise, c_rep is the bigest centroid
-            #################################################################     
-  
-  
+            #################################################################  
+
+            if (c_rep in self.taboo) and (c_add in self.taboo):
+                assert False, "Algorithm assumption: 2 closest centroids cannot be both in the taboo list"
+            elif (c_rep in self.taboo):
+                pass
+            elif (c_add in self.taboo):
+                c_rep, c_add = c_add, c_rep
+            else:
+                if self.V[c_rep] < self.V[c_add]:
+                    c_rep, c_add = c_add, c_rep
             
             #################################################################  
             ################################################################# 
@@ -154,8 +162,11 @@ class incremental_k_centers:
             # c_rep absorbe c_add, c_add is now the new face update 
             # centroids and V 
             #################################################################
-   
-   
+
+            self.V[c_rep] += self.V[c_add]
+            self.V[c_add] = 1
+
+            self.centroids[c_add] = face   
    
             #################################################################  
             #################################################################            
@@ -171,6 +182,7 @@ class incremental_k_centers:
             current_len = len(self.centroids)
             self.Y = np.append(self.Y, 0)
             self.centroids = np.vstack( [self.centroids, face] )
+            self.last_face = current_len-1 # modif
             
             
     def online_ssl_compute_solution(self):
@@ -179,9 +191,9 @@ class incremental_k_centers:
         ###################################
         # choose the experiment parameter
         ###################################
-        eps = 
-        var = 
-        k = 
+        eps = 0
+        var = 1000
+        k = 10
         ###################################
         ###################################
         W = build_similarity_graph(self.centroids, var = var, eps = eps, k = k)
@@ -189,7 +201,7 @@ class incremental_k_centers:
             V=np.diag(np.ones(self.centroids.shape[0]))
             self.last_face = self.centroids.shape[0] - 1
         else:
-                V=np.diag(self.V)
+            V=np.diag(self.V)
         W=V.dot(W.dot(V))
         ###################################
         # build the laplacian, compute the 
@@ -197,19 +209,24 @@ class incremental_k_centers:
         # an hardHFS function)
         ###################################
          
-         
+        L = build_laplacian(W, laplacian_normalization="")
+
+        f = hardHFS(graph=W, labels=self.Y, laplacian=L)
+
+        # print(f)
+
         ###################################
         ###################################
         return f[self.last_face]
         
         
         
-def online_face_recognition(profile_names, n_pictures = 15):
+def online_face_recognition(profile_names, n_pictures = 15, faces_path="../data/"):
     images = []
     labels = []
     label_names = []
     for i, name in enumerate(profile_names):
-        p = load_profile(name)
+        p = load_profile(name,faces_path=faces_path)
         p = p[0:n_pictures, ]
         images += [p]
         labels += [ np.ones(p.shape[0]) * (i + 1) ]
@@ -220,7 +237,9 @@ def online_face_recognition(profile_names, n_pictures = 15):
     model = incremental_k_centers(faces, labels)
     ## Start camera
     cam = cv.VideoCapture(0)
+    it_frame = 0
     while True:
+        it_frame += 1
         ret_val, img = cam.read()
         grey_image = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         working_image = cv.bilateralFilter(grey_image, 9, 75, 75)
@@ -260,12 +279,16 @@ def online_face_recognition(profile_names, n_pictures = 15):
                 cv.putText(img, txt , (p1[0] , p1[1] -5 - 10*i), cv.FONT_HERSHEY_COMPLEX_SMALL, 0.5+0.5*(i==f.shape[0]-1), color)
             cv.rectangle(img, p1, p2, color, 2)  
         cv.imshow("cam", img)
-        key = cv.waitKey(1)
-        if key in [27, 101]: break
+        key = cv.waitKey(10) # modif 1 to 10
+        if key in [27, 101]:
+            # print("dist",model.centroids_distances)
+            # print("centr",model.centroids)
+            # print("V",model.V)
+            break
         if key == ord('s'): 
             ## Save face
                 print('saved')
-                cv.imwrite("frame.png", img)
+                cv.imwrite("frame_"+str(it_frame)+".png", img)
                 ## cv.waitKey(1)     
     cv.destroyAllWindows()
         
@@ -288,7 +311,9 @@ def preprocess_face(grey_face):
 #######################################################################
 
 
-
+    grey_face = cv.GaussianBlur(grey_face,(3,3),0)
+    grey_face = cv.resize(grey_face,(EXTR_FRAME_SIZE,EXTR_FRAME_SIZE))
+    grey_face = cv.equalizeHist(grey_face)
 
 #######################################################################
 #######################################################################    

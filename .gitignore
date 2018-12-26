@@ -1,0 +1,8 @@
+
+\.ipynb_checkpoints/
+
+code_material/Large_Scale_Label_Propagation/__pycache__/
+
+code_material/__pycache__/
+
+*.pyc
