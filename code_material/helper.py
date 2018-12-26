@@ -62,16 +62,20 @@ def build_similarity_graph(X, var=1, eps=0, k=0):
 
             
      
-def build_laplacian(W, laplacian_normalization=""):
+def build_laplacian(W, laplacian_normalization="",laplacian_regularization=0):
   degree = W.sum(1)
   if not laplacian_normalization:
-    return np.diag(degree) - W
+    L = np.diag(degree) - W
   elif laplacian_normalization == "sym":
     aux = np.diag(1 / np.sqrt(degree))
-    return np.eye(*W.shape) - aux.dot(W.dot(aux))
+    L = np.eye(*W.shape) - aux.dot(W.dot(aux))
   elif laplacian_normalization == "rw":
-    return np.eye(*W.shape) - np.diag(1 / degree).dot(W)
+    L = np.eye(*W.shape) - np.diag(1 / degree).dot(W)
   else: raise ValueError
+
+  L += laplacian_regularization*np.eye(L.shape[0])
+
+  return L
   
   
 def hardHFS(graph, labels, laplacian):

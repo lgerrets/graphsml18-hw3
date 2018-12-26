@@ -209,7 +209,7 @@ class incremental_k_centers:
         # an hardHFS function)
         ###################################
          
-        L = build_laplacian(W, laplacian_normalization="")
+        L = build_laplacian(W, laplacian_normalization="", laplacian_regularization=0.2)
 
         f = hardHFS(graph=W, labels=self.Y, laplacian=L)
 
@@ -266,7 +266,7 @@ def online_face_recognition(profile_names, n_pictures = 15, faces_path="../data/
             ####################################################################################
             # Change False by something else to be able to disregard faces it cannot recognize #
             ####################################################################################
-            if False:
+            if f.max() < 0.5:
             ####################################################################################
             ####################################################################################
                color = (100, 100, 100)
