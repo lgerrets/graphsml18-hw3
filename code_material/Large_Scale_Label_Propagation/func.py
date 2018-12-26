@@ -17,7 +17,7 @@ from helper import *
 
 
 
-def iterative_hfs(niter = 20):
+def iterative_hfs(niter = 20, laplacian_regularization=0):
     # load the data   
     # a skeleton function to perform HFS, needs to be completed
     #  Input
@@ -52,7 +52,7 @@ def iterative_hfs(niter = 20):
     # expensive and that W is already undirected                    #
     #################################################################
 
-    sum_w = W.sum(axis=0)
+    sum_w = W.sum(axis=0) + laplacian_regularization
     for it in range(niter):
         for cl_ind in range(len(classes)):
             f[:,cl_ind] = (W.dot(f[:,cl_ind]))/sum_w
